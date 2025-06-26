@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商业帝国 - 大富翁游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            width: 95%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            gap: 2px;
+            background: #2c3e50;
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            min-height: 600px;
+        }
+
+        .board-space {
+            background: linear-gradient(145deg, #34495e, #2c3e50);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .board-space:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .corner-space {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            font-weight: bold;
+        }
+
+        .property-space {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+        }
+
+        .owned {
+            border: 3px solid #f1c40f;
+            box-shadow: 0 0 10px rgba(241, 196, 64, 0.5);
+        }
+
+        .current-player {
+            border: 3px solid #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(231, 76, 60, 0.7); }
+            50% { box-shadow: 0 0 20px rgba(231, 76, 60, 1); }
+        }
+
+        .game-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .player-info {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .current-turn {
+            background: rgba(231, 76, 60, 0.3);
+            border: 2px solid #e74c3c;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+        }
+
+        .btn-success {
+            background: linear-gradient(145deg, #27ae60, #229954);
+        }
+
+        .btn-warning {
+            background: linear-gradient(145deg, #f39c12, #e67e22);
+        }
+
+        .dice-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .dice {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: white;
+            color: #2c3e50;
+            border-radius: 10px;
+            margin: 0 10px;
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 60px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: rollDice 0.5s ease-in-out;
+        }
+
+        @keyframes rollDice {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+        }
+
+        .property-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .property-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        .property-price {
+            font-size: 1.1rem;
+            color: #27ae60;
+            margin-bottom: 5px;
+        }
+
+        .property-rent {
+            color: #e74c3c;
+        }
+
+        .message {
+            background: rgba(52, 152, 219, 0.2);
+            border: 1px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .winner-message {
+            background: rgba(39, 174, 96, 0.3);
+            border-color: #27ae60;
+            color: #2ecc71;
+            font-size: 1.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .game-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-title {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">商业帝国</h1>
+            <p class="game-subtitle">建立你的垄断企业，称霸商业市场！</p>
+        </div>
+
+        <div class="game-info">
+            <div class="info-panel">
+                <div class="panel-title">玩家</div>
+                <div id="players-list"></div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="panel-title">游戏状态</div>
+                <div id="current-turn"></div>
+                <div class="dice-container">
+                    <div class="dice" id="dice1">1</div>
+                    <div class="dice" id="dice2">1</div>
+                </div>
+                <div id="game-message"></div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="panel-title">当前房产</div>
+                <div id="property-info"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="roll-dice" onclick="rollDice()">掷骰子</button>
+            <button class="btn btn-success" id="buy-property" onclick="buyProperty()" disabled>购买房产</button>
+            <button class="btn btn-upgrade" style="background: #8e44ad;" id="upgrade-property" onclick="upgradeProperty()" disabled>升级房产</button>
+            <button class="btn btn-warning" id="end-turn" onclick="endTurn()" disabled>结束回合</button>
+            <button class="btn" onclick="resetGame()">新游戏</button>
+        </div>
+        <div class="game-board" id="game-board"></div>
+    </div>
+
+    <script>
+        class GameState {
+            constructor() {
+                this.players = [
+                    { name: '玩家一', money: 1500, position: 0, properties: [], color: '#e74c3c' },
+                    { name: '玩家二', money: 1500, position: 0, properties: [], color: '#3498db' },
+                    { name: '玩家三', money: 1500, position: 0, properties: [], color: '#27ae60' },
+                    { name: '玩家四', money: 1500, position: 0, properties: [], color: '#f39c12' }
+                ];
+                this.currentPlayer = 0;
+                this.gameEnded = false;
+                this.lastRoll = [1, 1];
+                this.turnPhase = 'roll'; // 'roll', 'action', 'end'
+            }
+        }
+
+        const properties = [
+            { name: '起点', type: 'corner', price: 0, rent: 0 },
+            { name: '地中海大道', type: 'property', price: 60, rent: 20 },
+            { name: '社区宝箱', type: 'special', price: 0, rent: 0 },
+            { name: '波罗的海大道', type: 'property', price: 60, rent: 20 },
+            { name: '所得税', type: 'tax', price: 0, rent: 200 },
+            { name: '雷丁铁路', type: 'railroad', price: 200, rent: 100 },
+            { name: '东方大道', type: 'property', price: 100, rent: 30 },
+            { name: '机会', type: 'special', price: 0, rent: 0 },
+            { name: '佛蒙特大道', type: 'property', price: 100, rent: 30 },
+            { name: '康涅狄格大道', type: 'property', price: 120, rent: 40 },
+            { name: '监狱', type: 'corner', price: 0, rent: 0 },
+            { name: '圣查尔斯广场', type: 'property', price: 140, rent: 50 },
+            { name: '电力公司', type: 'utility', price: 150, rent: 75 },
+            { name: '州府大道', type: 'property', price: 140, rent: 50 },
+            { name: '弗吉尼亚大道', type: 'property', price: 160, rent: 60 },
+            { name: '宾夕法尼亚铁路', type: 'railroad', price: 200, rent: 100 },
+            { name: '圣詹姆斯广场', type: 'property', price: 180, rent: 70 },
+            { name: '社区宝箱', type: 'special', price: 0, rent: 0 },
+            { name: '田纳西大道', type: 'property', price: 180, rent: 70 },
+            { name: '纽约大道', type: 'property', price: 200, rent: 80 },
+            { name: '免费停车', type: 'corner', price: 0, rent: 0 },
+            { name: '肯塔基大道', type: 'property', price: 220, rent: 90 },
+            { name: '机会', type: 'special', price: 0, rent: 0 },
+            { name: '印第安纳大道', type: 'property', price: 220, rent: 90 },
+            { name: '伊利诺伊大道', type: 'property', price: 240, rent: 100 },
+            { name: 'B&O铁路', type: 'railroad', price: 200, rent: 100 },
+            { name: '大西洋大道', type: 'property', price: 260, rent: 110 },
+            { name: '文特诺大道', type: 'property', price: 260, rent: 110 },
+            { name: '自来水公司', type: 'utility', price: 150, rent: 75 },
+            { name: '马文花园', type: 'property', price: 280, rent: 120 },
+            { name: '进监狱', type: 'corner', price: 0, rent: 0 },
+            { name: '太平洋大道', type: 'property', price: 300, rent: 130 },
+            { name: '北卡罗来纳大道', type: 'property', price: 300, rent: 130 },
+            { name: '社区宝箱', type: 'special', price: 0, rent: 0 },
+            { name: '宾夕法尼亚大道', type: 'property', price: 320, rent: 140 },
+            { name: '短线铁路', type: 'railroad', price: 200, rent: 100 },
+            { name: '机会', type: 'special', price: 0, rent: 0 },
+            { name: '公园广场', type: 'property', price: 350, rent: 175 },
+            { name: '奢侈税', type: 'tax', price: 0, rent: 100 },
+            { name: '木板路', type: 'property', price: 400, rent: 200 }
+        ];
+
+        let game = new GameState();
+
+        // 1. Track upgrade cost per property
+        properties.forEach((p, i) => {
+            p.baseRent = p.rent;
+            p.upgrades = 0;
+            p.upgradeCost = 0;
+        });
+
+        // 2. Track if upgraded this visit
+        let upgradedThisVisit = false;
+
+        function initializeBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            // Create board spaces in monopoly layout
+            const boardLayout = [
+                // Bottom row (right to left)
+                ...Array.from({length: 11}, (_, i) => 10 - i),
+                // Left column (bottom to top, excluding corners)
+                ...Array.from({length: 9}, (_, i) => 11 + i),
+                // Top row (left to right, excluding corners)
+                ...Array.from({length: 9}, (_, i) => 21 + i),
+                // Right column (top to bottom, excluding corners)
+                ...Array.from({length: 9}, (_, i) => 39 - i)
+            ];
+
+            for (let i = 0; i < 40; i++) {
+                const space = document.createElement('div');
+                space.className = 'board-space';
+                space.id = `space-${i}`;
+                
+                if ([0, 10, 20, 30].includes(i)) {
+                    space.className += ' corner-space';
+                } else if (properties[i].type === 'property' || properties[i].type === 'railroad' || properties[i].type === 'utility') {
+                    space.className += ' property-space';
+                }
+
+                space.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 5px;">${properties[i].name}</div>
+                    ${properties[i].price > 0 ? `<div style="font-size: 0.7rem;">￥${properties[i].price}</div>` : ''}
+                `;
+
+                space.onclick = () => selectProperty(i);
+                board.appendChild(space);
+            }
+
+            updateDisplay();
+        }
+
+        function getPhaseText(phase) {
+            const phaseTexts = {
+                'roll': '掷骰子',
+                'action': '行动',
+                'end': '结束回合'
+            };
+            return phaseTexts[phase] || phase;
+        }
+
+        function updateDisplay() {
+            updatePlayersList();
+            updateCurrentTurn();
+            updatePropertyInfo();
+            updateBoard();
+            updateButtons();
+        }
+
+        function updatePlayersList() {
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = game.players.map((player, index) => `
+                <div class="player-info ${index === game.currentPlayer ? 'current-turn' : ''}">
+                    <div style="color: ${player.color}; font-weight: bold;">${player.name}</div>
+                    <div>金钱: ￥${player.money}</div>
+                    <div>房产: ${player.properties.length}</div>
+                    <div>位置: ${properties[player.position].name}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateCurrentTurn() {
+            const currentTurn = document.getElementById('current-turn');
+            const currentPlayer = game.players[game.currentPlayer];
+            currentTurn.innerHTML = `
+                <div style="color: ${currentPlayer.color}; font-weight: bold; font-size: 1.2rem;">
+                    ${currentPlayer.name}'s Turn
+                </div>
+                <div>阶段: ${getPhaseText(game.turnPhase)}</div>
+            `;
+        }
+
+        function updatePropertyInfo() {
+            const propertyInfo = document.getElementById('property-info');
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+            
+            if (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') {
+                const owner = game.players.find(p => p.properties.includes(currentPlayer.position));
+                propertyInfo.innerHTML = `
+                    <div class="property-card">
+                        <div class="property-name">${currentProperty.name}</div>
+                        <div class="property-price">价格: ￥${currentProperty.price}</div>
+                        <div class="property-rent">租金: ￥${currentProperty.rent}</div>
+                        <div style="margin-top: 10px;">
+                            ${owner ? `拥有者: ${owner.name}` : '可购买'}
+                        </div>
+                    </div>
+                `;
+            } else {
+                propertyInfo.innerHTML = `
+                    <div class="property-card">
+                        <div class="property-name">${currentProperty.name}</div>
+                        <div style="opacity: 0.7;">特殊地块</div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateBoard() {
+            // Clear all player positions and ownership
+            for (let i = 0; i < 40; i++) {
+                const space = document.getElementById(`space-${i}`);
+                space.classList.remove('current-player', 'owned');
+            }
+
+            // Show current player position
+            const currentPlayerSpace = document.getElementById(`space-${game.players[game.currentPlayer].position}`);
+            currentPlayerSpace.classList.add('current-player');
+
+            // Show owned properties
+            game.players.forEach(player => {
+                player.properties.forEach(propertyIndex => {
+                    const space = document.getElementById(`space-${propertyIndex}`);
+                    space.classList.add('owned');
+                    space.style.borderColor = player.color;
+                });
+            });
+        }
+
+        function updateButtons() {
+            const rollBtn = document.getElementById('roll-dice');
+            const buyBtn = document.getElementById('buy-property');
+            const endBtn = document.getElementById('end-turn');
+            const upgradeBtn = document.getElementById('upgrade-property');
+
+            rollBtn.disabled = game.turnPhase !== 'roll' || game.gameEnded;
+
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+            const canBuy = game.turnPhase === 'action' && 
+                          (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') &&
+                          !game.players.some(p => p.properties.includes(currentPlayer.position)) &&
+                          currentPlayer.money >= currentProperty.price;
+            buyBtn.disabled = !canBuy || game.gameEnded;
+
+            // Upgrade button logic (always visible, disabled if not usable)
+            let canUpgrade =
+                game.turnPhase === 'end' &&
+                currentProperty.type === 'property' &&
+                currentPlayer.properties.includes(currentPlayer.position) &&
+                currentProperty.upgrades < 3 &&
+                !game.gameEnded &&
+                !upgradedThisVisit;
+            upgradeBtn.disabled = !canUpgrade;
+
+            // End turn is enabled in 'end' phase, or in 'action' phase on a buyable property (skip buy)
+            endBtn.disabled = !(
+                (game.turnPhase === 'end' && !game.gameEnded) ||
+                (game.turnPhase === 'action' && (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') && !game.players.some(p => p.properties.includes(currentPlayer.position)))
+            );
+        }
+
+        function rollDice() {
+            if (game.turnPhase !== 'roll' || game.gameEnded) return;
+
+            const dice1 = Math.floor(Math.random() * 6) + 1;
+            const dice2 = Math.floor(Math.random() * 6) + 1;
+            game.lastRoll = [dice1, dice2];
+
+            document.getElementById('dice1').textContent = dice1;
+            document.getElementById('dice2').textContent = dice2;
+
+            const total = dice1 + dice2;
+            const currentPlayer = game.players[game.currentPlayer];
+            
+            // Move player
+            const oldPosition = currentPlayer.position;
+            currentPlayer.position = (currentPlayer.position + total) % 40;
+
+            // Check if passed GO
+            if (currentPlayer.position < oldPosition) {
+                currentPlayer.money += 200;
+                showMessage(`${currentPlayer.name} 经过起点，获得￥200！`);
+            }
+
+            game.turnPhase = 'action';
+            handleLanding();
+            updateDisplay();
+        }
+
+        function handleLanding() {
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+
+            switch (currentProperty.type) {
+                case 'property':
+                case 'railroad':
+                case 'utility': {
+                    const owner = game.players.find(p => p.properties.includes(currentPlayer.position));
+                    if (owner && owner !== currentPlayer) {
+                        // Pay rent or go bankrupt
+                        const rent = currentProperty.rent;
+                        if (currentPlayer.money >= rent) {
+                            currentPlayer.money -= rent;
+                            owner.money += rent;
+                            showMessage(`${currentPlayer.name} 向 ${owner.name} 支付了￥${rent}租金！`);
+                            game.turnPhase = 'end';
+                        } else {
+                            // Bankruptcy: pay what you can, set money negative, owner gets as much as possible
+                            owner.money += Math.max(0, currentPlayer.money);
+                            showMessage(`${currentPlayer.name} 无法支付租金，破产！`);
+                            currentPlayer.money -= rent;
+                            game.gameEnded = true;
+                            showRanking();
+                        }
+                    } else if (owner && owner === currentPlayer) {
+                        showMessage(`${currentPlayer.name} 来到了自己的地块：${currentProperty.name}`);
+                        game.turnPhase = 'end';
+                    } else if (!owner) {
+                        showMessage(`${currentPlayer.name} 可以购买 ${currentProperty.name}，价格￥${currentProperty.price}`);
+                        // Do not force end turn if can't afford, allow skip
+                    }
+                    break;
+                }
+                case 'tax':
+                    currentPlayer.money -= currentProperty.rent;
+                    showMessage(`${currentPlayer.name} 缴纳了￥${currentProperty.rent}税款！`);
+                    game.turnPhase = 'end';
+                    break;
+                case 'corner':
+                    if (currentProperty.name === '进监狱') {
+                        currentPlayer.position = 10; // Jail position
+                        showMessage(`${currentPlayer.name} 进监狱了！`);
+                    }
+                    game.turnPhase = 'end';
+                    break;
+                default:
+                    showMessage(`${currentPlayer.name} 来到了 ${currentProperty.name}`);
+                    game.turnPhase = 'end';
+            }
+
+            if (!game.gameEnded) {
+                checkGameEnd();
+                updateDisplay(); // Always update display at the end
+            }
+        }
+
+        function upgradeProperty() {
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+            if (
+                currentProperty.type === 'property' &&
+                currentPlayer.properties.includes(currentPlayer.position) &&
+                currentProperty.upgrades < 3 &&
+                !upgradedThisVisit
+            ) {
+                let cost = Math.floor(currentProperty.price * 0.5 / 10) * 10;
+                if (currentPlayer.money < cost) {
+                    showMessage('金钱不足，无法升级。', 3000);
+                    return;
+                }
+                currentPlayer.money -= cost;
+                currentProperty.upgrades += 1;
+                currentProperty.upgradeCost = (currentProperty.upgradeCost || 0) + cost;
+                // Update rent
+                if (currentProperty.upgrades === 1) currentProperty.rent = Math.floor(currentProperty.baseRent * 1.5);
+                if (currentProperty.upgrades === 2) currentProperty.rent = Math.floor(currentProperty.baseRent * 2);
+                if (currentProperty.upgrades === 3) currentProperty.rent = Math.floor(currentProperty.baseRent * 3);
+                upgradedThisVisit = true;
+                showMessage(`${currentPlayer.name} 升级了${currentProperty.name}到等级${currentProperty.upgrades}，花费￥${cost}，新租金：￥${currentProperty.rent}`);
+                updateDisplay();
+            }
+        }
+
+        function buyProperty() {
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+
+            if (currentPlayer.money >= currentProperty.price && 
+                !game.players.some(p => p.properties.includes(currentPlayer.position))) {
+                currentPlayer.money -= currentProperty.price;
+                currentPlayer.properties.push(currentPlayer.position);
+                upgradedThisVisit = false; // allow upgrade after buy
+                showMessage(`${currentPlayer.name} 以￥${currentProperty.price}购买了${currentProperty.name}！`);
+                game.turnPhase = 'end';
+                updateDisplay();
+            }
+        }
+
+        function endTurn() {
+            // If in action phase and on a buyable property, treat as skip buy
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+            if (game.turnPhase === 'action' && (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') && !game.players.some(p => p.properties.includes(currentPlayer.position))) {
+                game.turnPhase = 'end';
+                updateDisplay();
+                return;
+            }
+            if (game.turnPhase !== 'end' || game.gameEnded) return;
+            upgradedThisVisit = false;
+
+            game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+            game.turnPhase = 'roll';
+            // Skip players with no money
+            while (game.players[game.currentPlayer].money < 0 && !game.gameEnded) {
+                game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+            }
+            updateDisplay();
+        }
+
+        function selectProperty(index) {
+            // Optional: Show property details when clicked
+            const property = properties[index];
+            const owner = game.players.find(p => p.properties.includes(index));
+            
+            let message = `${property.name}`;
+            if (property.price > 0) {
+                message += ` - 价格: ￥${property.price}, 租金: ￥${property.rent}`;
+            }
+            if (owner) {
+                message += ` (拥有者: ${owner.name})`;
+            }
+            
+            showMessage(message, 3000);
+        }
+
+        function showMessage(text, duration = 5000) {
+            const messageDiv = document.getElementById('game-message');
+            messageDiv.innerHTML = `<div class="message">${text}</div>`;
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (messageDiv.innerHTML.includes(text)) {
+                        messageDiv.innerHTML = '';
+                    }
+                }, duration);
+            }
+        }
+
+        function checkGameEnd() {
+            const activePlayers = game.players.filter(p => p.money >= 0);
+            
+            if (activePlayers.length === 1) {
+                game.gameEnded = true;
+                const winner = activePlayers[0];
+                showMessage(`🎉 ${winner.name} 获胜！拥有￥${winner.money}和${winner.properties.length}处房产！🎉`, 0);
+                document.getElementById('game-message').innerHTML = `<div class="message winner-message">🎉 ${winner.name} 赢得了游戏！🎉</div>`;
+            } else if (game.players.every(p => p.money < 0)) {
+                game.gameEnded = true;
+                showMessage("游戏结束 - 所有玩家都破产了！", 0);
+            }
+        }
+
+        function resetGame() {
+            game = new GameState();
+            initializeBoard();
+            showMessage("新游戏开始！掷骰子开始你的回合。");
+        }
+
+        function showRanking() {
+            // Calculate total for each player
+            const playerTotals = game.players.map(player => {
+                let landValue = 0;
+                let upgradeValue = 0;
+                player.properties.forEach(idx => {
+                    landValue += properties[idx].price;
+                    upgradeValue += properties[idx].upgradeCost || 0;
+                });
+                const total = player.money + Math.floor(landValue * 0.7 / 10) * 10 + Math.floor(upgradeValue * 0.5 / 10) * 10;
+                return {
+                    name: player.name,
+                    total,
+                    money: player.money,
+                    landValue,
+                    upgradeValue
+                };
+            });
+            // Sort by total descending, then by 1s
+            playerTotals.sort((a, b) => {
+                if (b.total !== a.total) return b.total - a.total;
+                if ((b.total % 10) !== (a.total % 10)) return (b.total % 10) - (a.total % 10);
+                return 0;
+            });
+            // Assign ranks, skipping for ties
+            let msg = '<div class="message winner-message">游戏结束！玩家排名：<br/>';
+            let rank = 1, prevTotal = null, prevOnes = null, skip = 0;
+            playerTotals.forEach((p, i) => {
+                let showRank = rank;
+                if (prevTotal !== null && p.total === prevTotal && (p.total % 10) === prevOnes) {
+                    showRank = rank - skip;
+                    skip++;
+                } else {
+                    skip = 1;
+                }
+                msg += `${showRank}. ${p.name} - 总分: ￥${p.total} (现金: ￥${p.money}, 土地价值: ￥${Math.floor(p.landValue * 0.7 / 10) * 10}, 升级价值: ￥${Math.floor(p.upgradeValue * 0.5 / 10) * 10})<br/>`;
+                prevTotal = p.total;
+                prevOnes = p.total % 10;
+                rank++;
+            });
+            msg += '</div>';
+            document.getElementById('game-message').innerHTML = msg;
+        }
+
+        // Initialize the game
+        initializeBoard();
+        showMessage("欢迎来到商业帝国！掷骰子开始你的回合。");
+
+        // Update keyboard shortcuts to match button order visually: Q=roll, W=buy, E=upgrade, R=end, T=new game
+        window.addEventListener('keydown', function(event) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            if (game.gameEnded && event.key.toLowerCase() !== 't') return;
+            switch (event.key.toLowerCase()) {
+                case 'q':
+                    if (!document.getElementById('roll-dice').disabled) rollDice();
+                    break;
+                case 'w':
+                    if (!document.getElementById('buy-property').disabled) buyProperty();
+                    break;
+                case 'e':
+                    if (!document.getElementById('upgrade-property').disabled) upgradeProperty();
+                    break;
+                case 'r':
+                    if (!document.getElementById('end-turn').disabled) endTurn();
+                    break;
+                case 't':
+                    resetGame();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
