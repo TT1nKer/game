@@ -120,6 +120,10 @@
             border-radius: 15px;
             padding: 20px;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            box-sizing: border-box;
         }
 
         .panel-title {
@@ -271,6 +275,9 @@
                 width: 100%;
                 max-width: 300px;
             }
+            .info-panel {
+                height: 340px;
+            }
         }
     </style>
 </head>
@@ -294,7 +301,7 @@
                     <div class="dice" id="dice1">1</div>
                     <div class="dice" id="dice2">1</div>
                 </div>
-                <div id="game-message"></div>
+                <div id="game-message" style="height: 360px; max-height:60vh; min-height:80px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:8px; padding:10px 8px; margin-top:auto;"></div>
             </div>
             
             <div class="info-panel">
@@ -305,8 +312,7 @@
 
         <div class="controls">
             <button class="btn btn-primary" id="roll-dice" onclick="rollDice()">掷骰子</button>
-            <button class="btn btn-success" id="buy-property" onclick="buyProperty()" disabled>购买房产</button>
-            <button class="btn btn-upgrade" style="background: #8e44ad;" id="upgrade-property" onclick="upgradeProperty()" disabled>升级房产</button>
+            <button class="btn btn-action" style="background: #27ae60;" id="action-property" onclick="actionProperty()" disabled>购买/升级</button>
             <button class="btn btn-warning" id="end-turn" onclick="endTurn()" disabled>结束回合</button>
             <button class="btn" onclick="resetGame()">新游戏</button>
         </div>
@@ -411,9 +417,14 @@
                     space.className += ' property-space';
                 }
 
+                let stars = '';
+                if (properties[i].type === 'property' && properties[i].upgrades > 0) {
+                    stars = `<div style="color: #ffd700; font-size: 1.1em; margin-top: 2px;">${'★'.repeat(properties[i].upgrades)}</div>`;
+                }
                 space.innerHTML = `
                     <div style="font-weight: bold; margin-bottom: 5px;">${properties[i].name}</div>
                     ${properties[i].price > 0 ? `<div style="font-size: 0.7rem;">￥${properties[i].price}</div>` : ''}
+                    ${stars}
                 `;
 
                 space.onclick = () => selectProperty(i);
@@ -495,6 +506,18 @@
             for (let i = 0; i < 40; i++) {
                 const space = document.getElementById(`space-${i}`);
                 space.classList.remove('current-player', 'owned');
+                // Update stars for upgrades
+                const starDiv = space.querySelector('.property-stars');
+                if (starDiv) starDiv.remove();
+                if (properties[i].type === 'property' && properties[i].upgrades > 0) {
+                    const stars = document.createElement('div');
+                    stars.className = 'property-stars';
+                    stars.style.color = '#ffd700';
+                    stars.style.fontSize = '1.1em';
+                    stars.style.marginTop = '2px';
+                    stars.textContent = '★'.repeat(properties[i].upgrades);
+                    space.appendChild(stars);
+                }
             }
 
             // Show current player position
@@ -513,35 +536,61 @@
 
         function updateButtons() {
             const rollBtn = document.getElementById('roll-dice');
-            const buyBtn = document.getElementById('buy-property');
+            const actionBtn = document.getElementById('action-property');
             const endBtn = document.getElementById('end-turn');
-            const upgradeBtn = document.getElementById('upgrade-property');
 
             rollBtn.disabled = game.turnPhase !== 'roll' || game.gameEnded;
 
             const currentPlayer = game.players[game.currentPlayer];
             const currentProperty = properties[currentPlayer.position];
+            // Can buy
             const canBuy = game.turnPhase === 'action' && 
                           (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') &&
                           !game.players.some(p => p.properties.includes(currentPlayer.position)) &&
                           currentPlayer.money >= currentProperty.price;
-            buyBtn.disabled = !canBuy || game.gameEnded;
-
-            // Upgrade button logic (always visible, disabled if not usable)
+            // Can upgrade
             let canUpgrade =
                 game.turnPhase === 'end' &&
                 currentProperty.type === 'property' &&
                 currentPlayer.properties.includes(currentPlayer.position) &&
                 currentProperty.upgrades < 3 &&
                 !game.gameEnded &&
-                !upgradedThisVisit;
-            upgradeBtn.disabled = !canUpgrade;
+                !upgradedThisVisit &&
+                currentPlayer.money >= Math.floor(currentProperty.price * 0.5 / 10) * 10;
+
+            // Set button label and enable/disable
+            actionBtn.textContent = '购买/升级';
+            actionBtn.disabled = !(canBuy || canUpgrade);
 
             // End turn is enabled in 'end' phase, or in 'action' phase on a buyable property (skip buy)
             endBtn.disabled = !(
                 (game.turnPhase === 'end' && !game.gameEnded) ||
                 (game.turnPhase === 'action' && (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') && !game.players.some(p => p.properties.includes(currentPlayer.position)))
             );
+        }
+
+        function actionProperty() {
+            const currentPlayer = game.players[game.currentPlayer];
+            const currentProperty = properties[currentPlayer.position];
+            // Can buy
+            const canBuy = game.turnPhase === 'action' && 
+                          (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') &&
+                          !game.players.some(p => p.properties.includes(currentPlayer.position)) &&
+                          currentPlayer.money >= currentProperty.price;
+            // Can upgrade
+            let canUpgrade =
+                game.turnPhase === 'end' &&
+                currentProperty.type === 'property' &&
+                currentPlayer.properties.includes(currentPlayer.position) &&
+                currentProperty.upgrades < 3 &&
+                !game.gameEnded &&
+                !upgradedThisVisit &&
+                currentPlayer.money >= Math.floor(currentProperty.price * 0.5 / 10) * 10;
+            if (canBuy) {
+                buyProperty();
+            } else if (canUpgrade) {
+                upgradeProperty();
+            }
         }
 
         function rollDice() {
@@ -599,9 +648,13 @@
                         }
                     } else if (owner && owner === currentPlayer) {
                         showMessage(`${currentPlayer.name} 来到了自己的地块：${currentProperty.name}`);
+                        if (game.turnPhase !== 'end') {
+                            upgradedThisVisit = false;
+                        }
                         game.turnPhase = 'end';
                     } else if (!owner) {
-                        showMessage(`${currentPlayer.name} 可以购买 ${currentProperty.name}，价格￥${currentProperty.price}`);
+                        const left = currentPlayer.money - currentProperty.price;
+                        showMessage(`${currentPlayer.name} 可以购买 ${currentProperty.name}，价格￥${currentProperty.price}。需支付￥${currentProperty.price}，剩余￥${left}`);
                         // Do not force end turn if can't afford, allow skip
                     }
                     break;
@@ -651,7 +704,7 @@
                 if (currentProperty.upgrades === 2) currentProperty.rent = Math.floor(currentProperty.baseRent * 2);
                 if (currentProperty.upgrades === 3) currentProperty.rent = Math.floor(currentProperty.baseRent * 3);
                 upgradedThisVisit = true;
-                showMessage(`${currentPlayer.name} 升级了${currentProperty.name}到等级${currentProperty.upgrades}，花费￥${cost}，新租金：￥${currentProperty.rent}`);
+                showMessage(`${currentPlayer.name} 升级了${currentProperty.name}到等级${currentProperty.upgrades}，花费￥${cost}，剩余￥${currentPlayer.money}，新租金：￥${currentProperty.rent}`);
                 updateDisplay();
             }
         }
@@ -664,19 +717,26 @@
                 !game.players.some(p => p.properties.includes(currentPlayer.position))) {
                 currentPlayer.money -= currentProperty.price;
                 currentPlayer.properties.push(currentPlayer.position);
-                upgradedThisVisit = false; // allow upgrade after buy
-                showMessage(`${currentPlayer.name} 以￥${currentProperty.price}购买了${currentProperty.name}！`);
+                upgradedThisVisit = true; // prevent upgrade immediately after buy
+                showMessage(`${currentPlayer.name} 以￥${currentProperty.price}购买了${currentProperty.name}，剩余￥${currentPlayer.money}`);
                 game.turnPhase = 'end';
                 updateDisplay();
             }
         }
 
         function endTurn() {
-            // If in action phase and on a buyable property, treat as skip buy
+            // If in action phase and on a buyable property, treat as skip buy and immediately go to next player
             const currentPlayer = game.players[game.currentPlayer];
             const currentProperty = properties[currentPlayer.position];
             if (game.turnPhase === 'action' && (currentProperty.type === 'property' || currentProperty.type === 'railroad' || currentProperty.type === 'utility') && !game.players.some(p => p.properties.includes(currentPlayer.position))) {
-                game.turnPhase = 'end';
+                // Move to next player
+                upgradedThisVisit = false;
+                game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+                game.turnPhase = 'roll';
+                // Skip players with no money
+                while (game.players[game.currentPlayer].money < 0 && !game.gameEnded) {
+                    game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+                }
                 updateDisplay();
                 return;
             }
@@ -710,15 +770,11 @@
 
         function showMessage(text, duration = 5000) {
             const messageDiv = document.getElementById('game-message');
-            messageDiv.innerHTML = `<div class="message">${text}</div>`;
-            
-            if (duration > 0) {
-                setTimeout(() => {
-                    if (messageDiv.innerHTML.includes(text)) {
-                        messageDiv.innerHTML = '';
-                    }
-                }, duration);
-            }
+            // Append new message to log
+            const log = messageDiv.innerHTML;
+            messageDiv.innerHTML = log + `<div class="message">${text}</div>`;
+            // Auto-scroll to bottom
+            messageDiv.scrollTop = messageDiv.scrollHeight;
         }
 
         function checkGameEnd() {
@@ -738,6 +794,7 @@
         function resetGame() {
             game = new GameState();
             initializeBoard();
+            document.getElementById('game-message').innerHTML = '';
             showMessage("新游戏开始！掷骰子开始你的回合。");
         }
 
@@ -789,24 +846,21 @@
         initializeBoard();
         showMessage("欢迎来到商业帝国！掷骰子开始你的回合。");
 
-        // Update keyboard shortcuts to match button order visually: Q=roll, W=buy, E=upgrade, R=end, T=new game
+        // Update keyboard shortcuts to: Q=roll, W=buy/upgrade, E=end, R=new game
         window.addEventListener('keydown', function(event) {
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-            if (game.gameEnded && event.key.toLowerCase() !== 't') return;
+            if (game.gameEnded && event.key.toLowerCase() !== 'r') return;
             switch (event.key.toLowerCase()) {
                 case 'q':
                     if (!document.getElementById('roll-dice').disabled) rollDice();
                     break;
                 case 'w':
-                    if (!document.getElementById('buy-property').disabled) buyProperty();
+                    if (!document.getElementById('action-property').disabled) actionProperty();
                     break;
                 case 'e':
-                    if (!document.getElementById('upgrade-property').disabled) upgradeProperty();
-                    break;
-                case 'r':
                     if (!document.getElementById('end-turn').disabled) endTurn();
                     break;
-                case 't':
+                case 'r':
                     resetGame();
                     break;
             }
