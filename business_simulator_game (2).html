@@ -419,7 +419,8 @@
 
                 let stars = '';
                 if (properties[i].type === 'property' && properties[i].upgrades > 0) {
-                    stars = `<div style="color: #ffd700; font-size: 1.1em; margin-top: 2px;">${'★'.repeat(properties[i].upgrades)}</div>`;
+                    const cappedStars = Math.min(properties[i].upgrades, 3);
+                    stars = `<div style="color: #ffd700; font-size: 1.1em; margin-top: 2px;">${'★'.repeat(cappedStars)}</div>`;
                 }
                 space.innerHTML = `
                     <div style="font-weight: bold; margin-bottom: 5px;">${properties[i].name}</div>
@@ -515,7 +516,7 @@
                     stars.style.color = '#ffd700';
                     stars.style.fontSize = '1.1em';
                     stars.style.marginTop = '2px';
-                    stars.textContent = '★'.repeat(properties[i].upgrades);
+                    stars.textContent = '★'.repeat(Math.min(properties[i].upgrades, 3));
                     space.appendChild(stars);
                 }
             }
@@ -698,6 +699,7 @@
                 }
                 currentPlayer.money -= cost;
                 currentProperty.upgrades += 1;
+                if (currentProperty.upgrades > 3) currentProperty.upgrades = 3;
                 currentProperty.upgradeCost = (currentProperty.upgradeCost || 0) + cost;
                 // Update rent
                 if (currentProperty.upgrades === 1) currentProperty.rent = Math.floor(currentProperty.baseRent * 1.5);
